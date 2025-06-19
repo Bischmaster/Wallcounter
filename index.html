@@ -6,30 +6,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Wallball Counter</title>
   <style>
+    :root {
+      --primary: #000;
+      --accent: #ffcf00;
+      --bg: #000;
+      --font: 'Helvetica Neue', sans-serif;
+    }
+
     body {
-      background-color: #000;
-      color: #fff;
-      font-family: 'Helvetica Neue', sans-serif;
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    header {
       text-align: center;
-      padding: 2rem;
+      margin-bottom: 30px;
     }
+
     h1 {
-      color: #ffcf00;
+      font-size: 4rem;
+      font-weight: 800;
+      margin: 0;
+      color: var(--accent);
     }
-    .progress-container {
-      width: 80%;
-      height: 30px;
-      background: #555;
-      border-radius: 20px;
-      margin: 20px auto;
-      overflow: hidden;
-    }
-    .progress-bar {
-      height: 100%;
-      background: #ffcf00;
-      width: 0%;
-      transition: width 0.3s ease;
-    }
+
     button {
       padding: 12px 20px;
       border: none;
@@ -37,207 +43,189 @@
       font-size: 1rem;
       margin: 10px 5px;
       cursor: pointer;
+      transition: background 0.3s ease;
     }
-    #connectBtn { background-color: #007BFF; color: white; }
-    #startBtn { background-color: #FFCF00; color: black; }
-    #calibrateBtn { background-color: #28A745; color: white; }
-    #overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.9);
-      color: #ffcf00;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      z-index: 1000;
-      display: none;
+
+    .btn-connect {
+      background-color: #007bff;
+      color: white;
     }
-  
+
+    .btn-start {
+      background-color: #ffcf00;
+      color: black;
+    }
+
+    .btn-calibrate {
+      background-color: #28a745;
+      color: white;
+    }
+
+    .counter-display {
+      font-size: 3rem;
+      margin: 20px 0;
+    }
+
+    .progress-container {
+      width: 100%;
+      max-width: 400px;
+      background: #333;
+      border-radius: 20px;
+      overflow: hidden;
+      height: 30px;
+      margin-bottom: 20px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .slider-container {
+      width: 100%;
+      max-width: 400px;
+      margin-top: 20px;
+    }
+
     input[type=range] {
       width: 100%;
-      height: 24px;
-      -webkit-appearance: none;
-      background: #ffcf00;
-      border-radius: 12px;
-      outline: none;
-    }
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      height: 36px;
-      width: 36px;
-      background: #000;
-      border-radius: 50%;
-      cursor: pointer;
-      border: 2px solid #fff;
-      margin-top: -6px;
-    }
-    input[type=range]::-moz-range-thumb {
-      height: 36px;
-      width: 36px;
-      background: #000;
-      border-radius: 50%;
-      cursor: pointer;
-      border: 2px solid #fff;
     }
 
+    .timer {
+      font-size: 2.5rem;
+      margin-top: 10px;
+    }
 
-    #calibrationPopup.overlay {
-      background-color: rgba(0, 0, 0, 0.85);
-      color: var(--accent);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      font-size: 2rem;
-      font-weight: bold;
-      z-index: 9999;
+    .overlay {
       position: fixed;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
+      background-color: rgba(0, 0, 0, 0.85);
+      color: var(--accent);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 3rem;
+      font-weight: bold;
+      z-index: 9999;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.4s ease;
     }
 
-    #calibrationPopup.overlay.visible {
+    .overlay.visible {
       opacity: 1;
       pointer-events: auto;
     }
-
-</style>
+  </style>
 </head>
 <body>
-  <h1>🏋️ Wallball Counter</h1>
-  <div>
-    <span>Treffer: <span id="count">0</span> / <span id="goalDisplay">50</span></span>
+  <header>
+    <h1>🏋️ Wallball Counter</h1>
+  </header>
+
+  <div class="counter-display">
+    Treffer: <span id="count">0</span> / <span id="goalDisplay">50</span>
   </div>
-  <div>⏱️ Zeit: <span id="timer">0.0</span> s</div>
+
+  <div class="timer">⏱️ Zeit: <span id="timer">0.0</span> s</div>
+
   <div class="progress-container">
-    <div class="progress-bar" id="progressBar"></div>
+    <div class="progress-bar" id="progress"></div>
   </div>
-  <input type="range" min="1" max="150" value="50" id="goalSlider" oninput="setGoal(this.value)">
+
   <div>
-    <button id="connectBtn" onclick="connect()">🔗 Verbinden</button>
-    <button id="startBtn" onclick="startSession()">▶️ Start / Reset</button>
-    <button id="calibrateBtn" onclick="calibrate()">🧪 Kalibrieren</button>
+    <button class="btn-connect" onclick="connect()">🔗 Verbinden</button>
+    <button class="btn-start" onclick="startSession()">▶️ Start / Reset</button>
+    <button class="btn-calibrate" onclick="calibrate()">🧪 Kalibrieren</button>
   </div>
-  <p id="status">Nicht verbunden</p>
-  <div id="overlay" onclick="hideOverlay()">🏁 Ziel erreicht!</div>
+
+  <div class="slider-container">
+    <label for="goalSlider">🎯 Ziel einstellen</label>
+    <input type="range" id="goalSlider" min="1" max="150" value="50" oninput="updateGoal(this.value)">
+  </div>
+
+  <audio id="hitSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+  <audio id="finishSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"></audio>
+
+  <div class="overlay" id="finishOverlay" onclick="hideFinishOverlay()">🏁 Ziel erreicht!</div>
 
   <script>
     let device, server, countChar, resetChar, calibrateChar;
     let goalValue = 50;
-    let localCount = 0;
-    let goalReached = false;
-let thresholdChar;
-let lastThreshold = 0;
-let timerRunning = false;
-let timerStart = 0;
-let timerInterval;
-
-    function setGoal(val) {
-      goalValue = parseInt(val);
-      document.getElementById("goalDisplay").textContent = goalValue;
-      updateProgress();
-    }
-
-    function updateProgress() {
-      const percent = Math.min(100, (localCount / goalValue) * 100);
-      document.getElementById("progressBar").style.width = percent + "%";
-    }
-
-    function showOverlay() {
-      document.getElementById("overlay").style.display = "flex";
-    }
-
-    function hideOverlay() {
-      document.getElementById("overlay").style.display = "none";
-    }
+    let timerRunning = false;
+    let timerStart = 0;
+    let timerInterval;
 
     async function connect() {
       try {
         device = await navigator.bluetooth.requestDevice({
           filters: [{ namePrefix: "WallballCounter" }],
-          optionalServices: ['19b10000-e8f2-537e-4f6c-d104768a1214']
+          optionalServices: ['0000cafe-0000-1000-8000-00805f9b34fb']
         });
 
         server = await device.gatt.connect();
-        const service = await server.getPrimaryService('19b10000-e8f2-537e-4f6c-d104768a1214');
+        const service = await server.getPrimaryService('0000cafe-0000-1000-8000-00805f9b34fb');
 
-        countChar = await service.getCharacteristic('19b10001-e8f2-537e-4f6c-d104768a1214');
-        resetChar = await service.getCharacteristic('19b10002-e8f2-537e-4f6c-d104768a1214');
-        calibrateChar = await service.getCharacteristic('19b10003-e8f2-537e-4f6c-d104768a1214');
-      thresholdChar = await service.getCharacteristic('19b10004-e8f2-537e-4f6c-d104768a1214');
-      if (thresholdChar) {
-        try {
-          const value = await thresholdChar.readValue();
-          const t = value.getUint16(0, true);
-          lastThreshold = t;
-        } catch (e) {
-          console.warn("Threshold-Read fehlgeschlagen:", e);
-        }
-      }
-
-        document.getElementById("status").textContent = "✅ Verbunden";
+        countChar = await service.getCharacteristic('0001cafe-0000-1000-8000-00805f9b34fb');
+        resetChar = await service.getCharacteristic('0002cafe-0000-1000-8000-00805f9b34fb');
+        calibrateChar = await service.getCharacteristic('0003cafe-0000-1000-8000-00805f9b34fb');
 
         countChar.startNotifications();
-        countChar.addEventListener("characteristicvaluechanged", event => {
+        countChar.addEventListener('characteristicvaluechanged', event => {
           const count = event.target.value.getUint8(0);
 
-          if (goalReached) return;
+          if (count <= goalValue) {
+            document.getElementById('count').textContent = count;
+            updateProgress(count);
 
-          localCount = count;
-          document.getElementById("count").textContent = localCount;
-          updateProgress();
-
-          
-          if (localCount === 1 && !timerRunning) startTimer();
-          if (localCount >= goalValue) {
-            stopTimer();
-
-            goalReached = true;
-            showOverlay();
+            if (count === 1 && !timerRunning) startTimer();
+            if (count < goalValue) document.getElementById("hitSound").play();
+            if (count === goalValue) {
+              stopTimer();
+              document.getElementById("finishSound").play();
+              showFinishOverlay();
+            }
           }
         });
+
+        console.log("Verbunden mit WallballCounter");
       } catch (error) {
         console.error("Verbindung fehlgeschlagen:", error);
-        document.getElementById("status").textContent = "❌ Verbindung fehlgeschlagen";
       }
+    }
+
+    function updateProgress(count) {
+      const percent = Math.min(100, (count / goalValue) * 100);
+      document.getElementById('progress').style.width = percent + '%';
+    }
+
+    function updateGoal(val) {
+      goalValue = parseInt(val);
+      document.getElementById('goalDisplay').textContent = goalValue;
+      const count = parseInt(document.getElementById('count').textContent);
+      updateProgress(count);
     }
 
     async function startSession() {
       if (!resetChar) return alert("Nicht verbunden.");
       await resetChar.writeValue(new Uint8Array([1]));
-      localCount = 0;
-      goalReached = false;
-      document.getElementById("count").textContent = "0";
-      updateProgress();
-      hideOverlay();
+      document.getElementById('count').textContent = 0;
+      updateProgress(0);
       resetTimer();
+      hideFinishOverlay();
     }
 
     async function calibrate() {
       if (!calibrateChar) return alert("Nicht verbunden.");
       await calibrateChar.writeValue(new Uint8Array([1]));
-      showCalibrationPopup();
-      
-      const calibElem = document.getElementById("calibrationStatus");
-      if (!calibElem) return;
-      calibElem.textContent = "🧪 Kalibrierung läuft... (10 Sekunden)";
-      
-      const logElem = document.getElementById("calibrationStatusLog");
-      logElem.innerHTML += "🕒 Kalibrierung gestartet um " + new Date().toLocaleTimeString() + "<br>";
-      setTimeout(() => {
-        calibElem.textContent = "";
-        logElem.innerHTML += "✅ Kalibrierung abgeschlossen<br>";
-      }, 10000);
-
-
+      alert("Kalibrierung gestartet. Jetzt 10 Sekunden werfen!");
     }
-  
+
     function startTimer() {
       timerRunning = true;
       timerStart = performance.now();
@@ -250,9 +238,6 @@ let timerInterval;
     function stopTimer() {
       timerRunning = false;
       clearInterval(timerInterval);
-      const elapsed = (performance.now() - timerStart) / 1000;
-      const avg = elapsed / goalValue;
-      document.getElementById("timer").textContent = `${elapsed.toFixed(1)} s ⌀ ${avg.toFixed(2)} s/Treffer`;
     }
 
     function resetTimer() {
@@ -260,69 +245,13 @@ let timerInterval;
       document.getElementById("timer").textContent = "0.0";
     }
 
-
-    
-    async function showCalibrationPopup() {
-      const popup = document.getElementById("calibrationPopup");
-      const countdownElem = document.getElementById("calibrationCountdown");
-      const resultElem = document.getElementById("calibrationResult");
-      popup.classList.add("visible");
-      resultElem.textContent = "";
-      let seconds = 10;
-      countdownElem.textContent = `🧪 Kalibrierung läuft: ${seconds}`;
-      const interval = setInterval(() => {
-        seconds--;
-        countdownElem.textContent = `🧪 Kalibrierung läuft: ${seconds}`;
-        if (seconds <= 0) {
-          clearInterval(interval);
-        }
-      }, 1000);
-
-      await new Promise(resolve => setTimeout(resolve, 10000));
-      try {
-        const value = await thresholdChar.readValue();
-        const threshold = value.getUint16(0, true);
-        lastThreshold = threshold;
-        resultElem.textContent = `📈 Schwellenwert: ${threshold}`;
-      } catch (e) {
-        resultElem.textContent = "❌ Schwellenwert konnte nicht gelesen werden.";
-        console.error("Fehler beim Lesen des neuen Schwellenwerts:", e);
-      }
+    function showFinishOverlay() {
+      document.getElementById("finishOverlay").classList.add("visible");
     }
 
-    function closeCalibrationPopup() {
-      const popup = document.getElementById("calibrationPopup");
-      popup.classList.remove("visible");
+    function hideFinishOverlay() {
+      document.getElementById("finishOverlay").classList.remove("visible");
     }
-
-function closeCalibrationPopup() {
-      const popup = document.getElementById("calibrationPopup");
-      popup.classList.remove("visible");
-    }
-
-
-    function playFinishBeep() {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-      gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      oscillator.start();
-      oscillator.stop(ctx.currentTime + 0.5);
-    }
-    </script>
-
-
-<div id="calibrationPopup" class="overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:#000000f2; color:#ffcf00; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:1.5rem; z-index:2000; text-align:center; padding:2rem;" onclick="closeCalibrationPopup()">
-  <div id="calibrationCountdown">🧪 Kalibrierung läuft: 10</div>
-  <div id="calibrationResult" style="margin-top:1em;"></div>
-  <div style="font-size:0.9rem; color:#ccc; margin-top:1em;">Klicke zum Schließen</div>
-</div>
-
-
-
+  </script>
 </body>
 </html>
