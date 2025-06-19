@@ -30,7 +30,7 @@
     }
 
     h1 {
-      font-size: 4rem;
+      font-size: 5rem;
       font-weight: 800;
       margin: 0;
       color: var(--accent);
@@ -62,7 +62,7 @@
     }
 
     .counter-display {
-      font-size: 3rem;
+      font-size: 4rem;
       margin: 20px 0;
     }
 
@@ -94,7 +94,7 @@
     }
 
     .timer {
-      font-size: 2.5rem;
+      font-size: 3rem;
       margin-top: 10px;
     }
 
@@ -132,7 +132,7 @@
     Treffer: <span id="count">0</span> / <span id="goalDisplay">50</span>
   </div>
 
-  <div class="timer">⏱️ Zeit: <span id="timer">0.0</span> s</div>
+  <div class="timer">⏱️ <span id="timer">0.0</span> s / <span id="avgTime">-</span> s pro Treffer</div>
 
   <div class="progress-container">
     <div class="progress-bar" id="progress"></div>
@@ -149,109 +149,158 @@
     <input type="range" id="goalSlider" min="1" max="150" value="50" oninput="updateGoal(this.value)">
   </div>
 
-  <audio id="hitSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
-  <audio id="finishSound" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"></audio>
-
+    
   <div class="overlay" id="finishOverlay" onclick="hideFinishOverlay()">🏁 Ziel erreicht!</div>
 
-  <script>
-    let device, server, countChar, resetChar, calibrateChar;
-    let goalValue = 50;
-    let timerRunning = false;
-    let timerStart = 0;
-    let timerInterval;
+  
+<div id="status" style="margin-top: 10px; font-size: 1.2rem;">❌ Nicht verbunden</div>
 
-    async function connect() {
-      try {
-        device = await navigator.bluetooth.requestDevice({
-          filters: [{ namePrefix: "WallballCounter" }],
-          optionalServices: ['0000cafe-0000-1000-8000-00805f9b34fb']
-        });
+<script>
+let device, server, countChar, resetChar, calibrateChar;
+let goalValue = 50;
+let timerRunning = false;
+let timerStart = 0;
+let timerInterval;
 
-        server = await device.gatt.connect();
-        const service = await server.getPrimaryService('0000cafe-0000-1000-8000-00805f9b34fb');
+async function connect() {
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "WallballCounter" }],
+      optionalServices: ['19b10000-e8f2-537e-4f6c-d104768a1214']
+    });
 
-        countChar = await service.getCharacteristic('0001cafe-0000-1000-8000-00805f9b34fb');
-        resetChar = await service.getCharacteristic('0002cafe-0000-1000-8000-00805f9b34fb');
-        calibrateChar = await service.getCharacteristic('0003cafe-0000-1000-8000-00805f9b34fb');
+    server = await device.gatt.connect();
+    const service = await server.getPrimaryService('19b10000-e8f2-537e-4f6c-d104768a1214');
 
-        countChar.startNotifications();
-        countChar.addEventListener('characteristicvaluechanged', event => {
-          const count = event.target.value.getUint8(0);
+    countChar = await service.getCharacteristic('19b10001-e8f2-537e-4f6c-d104768a1214');
+    resetChar = await service.getCharacteristic('19b10002-e8f2-537e-4f6c-d104768a1214');
+    calibrateChar = await service.getCharacteristic('19b10003-e8f2-537e-4f6c-d104768a1214');
 
-          if (count <= goalValue) {
-            document.getElementById('count').textContent = count;
-            updateProgress(count);
+    countChar.startNotifications();
+    countChar.addEventListener('characteristicvaluechanged', event => {
+      const count = event.target.value.getUint8(0);
 
-            if (count === 1 && !timerRunning) startTimer();
-            if (count < goalValue) document.getElementById("hitSound").play();
-            if (count === goalValue) {
-              stopTimer();
-              document.getElementById("finishSound").play();
-              showFinishOverlay();
-            }
-          }
-        });
+      if (count <= goalValue) {
+        document.getElementById('count').textContent = count;
+        updateProgress(count);
 
-        console.log("Verbunden mit WallballCounter");
-      } catch (error) {
-        console.error("Verbindung fehlgeschlagen:", error);
+        if (count === 1 && !timerRunning) startTimer();
+        if (count < goalValue) playHitBeep();
+        if (count === goalValue) {
+          stopTimer();
+          playFinishBeep();
+          const elapsed = (performance.now() - timerStart) / 1000;
+          const avg = elapsed / goalValue;
+          document.getElementById("avgTime").textContent = avg.toFixed(2);
+          showFinishOverlay();
+        }
       }
-    }
+    });
 
-    function updateProgress(count) {
-      const percent = Math.min(100, (count / goalValue) * 100);
-      document.getElementById('progress').style.width = percent + '%';
-    }
+    document.getElementById("status").textContent = "✅ Verbunden";
+    document.getElementById("status").style.color = "#28a745";
+  } catch (error) {
+    document.getElementById("status").textContent = "❌ Nicht verbunden";
+    document.getElementById("status").style.color = "red";
+    console.error("Verbindung fehlgeschlagen:", error);
+  }
+}
 
-    function updateGoal(val) {
-      goalValue = parseInt(val);
-      document.getElementById('goalDisplay').textContent = goalValue;
-      const count = parseInt(document.getElementById('count').textContent);
-      updateProgress(count);
-    }
+function updateProgress(count) {
+  const percent = Math.min(100, (count / goalValue) * 100);
+  document.getElementById('progress').style.width = percent + '%';
+}
 
-    async function startSession() {
-      if (!resetChar) return alert("Nicht verbunden.");
-      await resetChar.writeValue(new Uint8Array([1]));
-      document.getElementById('count').textContent = 0;
-      updateProgress(0);
-      resetTimer();
-      hideFinishOverlay();
-    }
+function updateGoal(val) {
+  goalValue = parseInt(val);
+  document.getElementById('goalDisplay').textContent = goalValue;
+  const count = parseInt(document.getElementById('count').textContent);
+  updateProgress(count);
+}
 
-    async function calibrate() {
-      if (!calibrateChar) return alert("Nicht verbunden.");
-      await calibrateChar.writeValue(new Uint8Array([1]));
-      alert("Kalibrierung gestartet. Jetzt 10 Sekunden werfen!");
-    }
+async function startSession() {
+  if (!resetChar) return alert("Nicht verbunden.");
+  await resetChar.writeValue(new Uint8Array([1]));
+  document.getElementById('count').textContent = 0;
+  updateProgress(0);
+  resetTimer();
+  document.getElementById("avgTime").textContent = "-";
+  hideFinishOverlay();
+}
 
-    function startTimer() {
-      timerRunning = true;
-      timerStart = performance.now();
-      timerInterval = setInterval(() => {
-        const elapsed = (performance.now() - timerStart) / 1000;
-        document.getElementById("timer").textContent = elapsed.toFixed(1);
-      }, 100);
-    }
+async function calibrate() {
+  if (!calibrateChar) return alert("Nicht verbunden.");
+  await calibrateChar.writeValue(new Uint8Array([1]));
+  alert("Kalibrierung gestartet. Jetzt 10 Sekunden werfen!");
+}
 
-    function stopTimer() {
-      timerRunning = false;
-      clearInterval(timerInterval);
-    }
+function startTimer() {
+  timerRunning = true;
+  timerStart = performance.now();
+  timerInterval = setInterval(() => {
+    const elapsed = (performance.now() - timerStart) / 1000;
+    document.getElementById("timer").textContent = elapsed.toFixed(1);
+  }, 100);
+}
 
-    function resetTimer() {
-      stopTimer();
-      document.getElementById("timer").textContent = "0.0";
-    }
+function stopTimer() {
+  timerRunning = false;
+  clearInterval(timerInterval);
+}
 
-    function showFinishOverlay() {
-      document.getElementById("finishOverlay").classList.add("visible");
-    }
+function resetTimer() {
+  stopTimer();
+  document.getElementById("timer").textContent = "0.0";
+}
 
-    function hideFinishOverlay() {
-      document.getElementById("finishOverlay").classList.remove("visible");
-    }
-  </script>
+function showFinishOverlay() {
+  document.getElementById("finishOverlay").classList.add("visible");
+}
+
+function hideFinishOverlay() {
+  document.getElementById("finishOverlay").classList.remove("visible");
+}
+
+function playHitBeep() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = "sine";
+  osc.frequency.value = 1000;
+  gain.gain.setValueAtTime(0.2, ctx.currentTime);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start();
+  osc.stop(ctx.currentTime + 0.1); // sehr kurzer Beep
+
+  setTimeout(() => ctx.close(), 150);
+}
+
+
+function playFinishBeep() {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = "square";
+  osc.frequency.value = 600;
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start();
+  osc.stop(ctx.currentTime + 0.25); // kurzer Abschlusston
+
+  setTimeout(() => ctx.close(), 300);
+}
+
+</script>
+</body>
+</html>
+
 </body>
 </html>
